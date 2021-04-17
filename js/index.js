@@ -1,74 +1,110 @@
-const URL = 'http://localhost:3000/monsters'
+const MONST_URL = 'http://localhost:3000/monsters/'
 
-let PAGE_NUM = 1
 
-document.addEventListener("DOMContentLoaded", () => {
-    fetchMonsters()
-
-    document.getElementById('monster-form').addEventListener('submit', (event) => {
-        event.preventDefault()
-        addMonster(event)
-    })
-
-    document.getElementById("forward").addEventListener('click', () => pageForward())
-    document.getElementById("back").addEventListener('click', () => pageBackward())
-})
-
-function addMonster(event){
-    let newMonster = {
-        name: event.target.name.value,
-        age: parseInt(event.target.age.value),
-        description: event.target.description.value
-    }
-
-    let reqPack = {
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        method: "POST",
-        body: JSON.stringify(newMonster)
-    }
-
-    fetch(URL, reqPack)
-        .then(resp => resp.json())
-        .then(monster => renderMonster(monster))
-}
-
-function fetchMonsters() {
-    document.getElementById('monster-container').innerText = ""
-    fetch(`http://localhost:3000/monsters/?_limit=500&_page=${PAGE_NUM}`)
-        .then(resp => resp.json())
-        .then(monsters => {
-            monsters.forEach(monster => renderMonster(monster))
-        })
-}
-
-function renderMonster(monster) {
-    let monsterContainer = document.getElementById('monster-container')
+document.addEventListener('DOMContentLoaded', () => {
+    const monsterContainer = document.getElementById('monster-container')
     
-    let div = document.createElement('div')
-
-    let header = document.createElement('h2')
-        header.innerText = monster.name
-
-    let age = document.createElement('h4')
-        age.innerText = `Age: ${monster.age}`
+    function renderMonster(monster) {
         
-    let bio = document.createElement('p')
-        bio.innerText = `Bio: ${monster.description}`
+        let monsterDiv = document.createElement('div')
+        
+        let monsterName = document.createElement('h2')
+        monsterName.innerText = monster.name + monster.id
+        
+        let monsterAge = document.createElement('h4')
+        monsterAge.innerText = `Age: ${monster.age}`
+        
+        let monsterDescription = document.createElement('p')
+        monsterDescription.innerText = `Bio: ${monster.description}`
+        
+        monsterDiv.append(monsterName, monsterAge, monsterDescription)
+        
+        monsterContainer.appendChild(monsterDiv)
+    }
     
-    div.append(header, age, bio)
-    monsterContainer.append(div)
+    function renderForm() {
+        const formDiv = document.getElementById('create-monster')
+        
+        let monForm = document.createElement('form')
+        
+        let nameInput = document.createElement('input')
+        nameInput.name = 'name'
+        nameInput.placeholder = 'name...'
+        
+        let ageInput = document.createElement('input')
+        ageInput.name = 'age'
+        ageInput.placeholder = 'age...'
+        
+        let descInput = document.createElement('input')
+        descInput.name = 'description'
+        descInput.placeholder = 'description...'
+        
+        let submitBtn = document.createElement('button')
+        submitBtn.innerText = 'Create'
+        
+        monForm.addEventListener('submit', (e) => {
+            e.preventDefault()
+            
+            let object = {
+                name: e.target.name.value,
+                age: e.target.age.value,
+                description: e.target.description.value
+            }
+            
+            fetch(MONST_URL, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json"
+                },
+                method: "POST",
+                body: JSON.stringify(object)
+            }).then(res => res.json()).then(resMon => {
+                renderMonster(resMon)
+                monForm.reset()
+            })
+        })
+        
+        monForm.append(nameInput, ageInput, descInput, submitBtn)
+        
+        formDiv.appendChild(monForm)        
+    }
+    
+    renderForm()
 
-}
+    let page = 1 
+    let currentPage = `?_limit=500&_page=${page}`
+    
+    const nextBtn = document.getElementById('forward')
+    nextBtn.addEventListener('click', () => {
+        
+        monsterContainer.innerHTML = ''
+        ++page 
+        currentPage = `?_limit=500&_page=${page}`
+        
+        fetch(MONST_URL+currentPage)
+            .then(res => res.json())
+            .then((monRes) => {
+                monRes.forEach(monster => renderMonster(monster))
+            })
+    })
+    
+    const backBtn = document.getElementById('back')
+        backBtn.addEventListener('click', () => {
+            if (page === 1) { return }  else {
+    
+                monsterContainer.innerHTML = ''
+                --page
+                currentPage = `?_limit=500&_page=${page}`
 
-function pageForward() {
-    PAGE_NUM++
-    fetchMonsters()
-}
-
-function pageBackward() {
-    PAGE_NUM--
-    fetchMonsters()
-}
+                fetch(MONST_URL+currentPage)
+                    .then(res => res.json())
+                    .then((monRes) => {
+                        monRes.forEach(monster => renderMonster(monster))
+                    })
+                }
+        })
+    
+    fetch(MONST_URL+currentPage)
+        .then(res => res.json())
+        .then((monRes) => monRes.forEach(monster => renderMonster(monster)))
+})
